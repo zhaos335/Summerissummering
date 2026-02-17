@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sea of Forking Texts</title>
+<style>
+  body { margin:0; 
+    text-align: center;
+  margin: 0; 
+  background: linear-gradient(
+    180deg, 
+    #20568f 0%,    
+    #4d9fdc 30%,   
+    #E7F5BF 80%,   
+    #E6D991 90%   );
+  font-family: serif; 
+  min-height: 100vh;
+}
+       
+  #ui { position:fixed; top:10px; 
+        left:50%; 
+        transform:translateX(-50%); 
+        z-index:10; }
+  input { font-size:16px; 
+          padding:6px 10px; 
+          width:400px; 
+          color: #4d9fdc;
+        }
+  canvas { display:block; }
+
+</style>
+</head>
+<body>
+
+<input id="textInput" value="The Garden of Forking Paths">
+<canvas id="c"></canvas>
+<audio id="seaAudio" src="sea.wav" loop></audio>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const input = document.getElementById('textInput');
+const audio = document.getElementById('seaAudio');
+
+document.addEventListener('click', () => {
+  audio.play();
+}, { once: true });
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const seaY = canvas.height * 0.6;
+let mouseX = -1000, drift = 0, t = 0;
+
+let sentence = "The Garden of Forking Paths";
+let letters = sentence.split('');
+
+input.addEventListener('input', () => {
+  sentence = input.value || " ";
+  letters = sentence.split('');
+});
+
+// fragments 数量（要和 fragment.html 里保持一致）
+const fragmentsCount = 6;
+
+// 鼠标跟踪
+canvas.addEventListener('mousemove', e => mouseX = e.clientX);
+
+// 工具函数
+const createArray = (count, generator) =>
+  Array.from({ length: count }, generator);
+
+// 字母雨（每个字母绑定 fragment id）
+let rain = createArray(60, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * seaY,
+  c: letters[Math.random() * letters.length | 0],
+  fragment: Math.floor(Math.random() * fragmentsCount)
+}));
+
+// 海底点
+const dots = createArray(300, () => ({
+  x: Math.random() * canvas.width,
+  y: seaY + Math.random() * (canvas.height - seaY)
+}));
+
+// 点击检测（只绑定一次！）
+canvas.addEventListener("click", e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  rain.forEach(r => {
+    if (
+      x > r.x - 15 && x < r.x + 15 &&
+      y > r.y - 30 && y < r.y
+    ) {
+      window.location.href = `fragment.html?id=${r.fragment}`;
+    }
+  });
+});
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = '33px serif';
+
+  // 字母雨
+  ctx.fillStyle = '#324E64';
+  rain.forEach(r => {
+    ctx.fillText(r.c, r.x, r.y);
+    r.y += 0.6;
+
+    if (r.y > seaY) {
+      r.y = 0;
+      r.x = Math.random() * canvas.width;
+      r.c = letters[Math.random() * letters.length | 0];
+      r.fragment = Math.floor(Math.random() * fragmentsCount);
+    }
+  });
+
+  // 海浪文字
+  drift += 0.4;
+  letters.forEach((letter, i) => {
+    let x = i * 24 + 50 - drift;
+    if (x < -50) x += canvas.width;
+
+    let wave = Math.sin(i * 0.5 + t) * 20;
+    const dist = Math.abs(x - mouseX);
+    if (dist < 120) wave -= (120 - dist) * 0.5;
+
+    ctx.fillText(letter, x, seaY + wave);
+  });
+
+  // 海底点
+  ctx.fillStyle = '#84572F';
+  dots.forEach(d => {
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, 1, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  t += 0.05;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
